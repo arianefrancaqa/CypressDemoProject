@@ -55,7 +55,9 @@
 
 ### 6. About the project
 - It is constructed using App Actions with Custom Commands
+- To describe the Custom Commands I'm using a *d.ts file because Custom Commands have typescript support. When adding custom commands to the cy object, you can manually add their types to avoid TypeScript errors.
 - To speed up the tests I also used a Post API request to create the Login data, that way the tests are not redundant
+- To API Schema validation I used Joi validation module
 
 ### Cypress documentation that this project is based:
 - https://docs.cypress.io/guides/overview/why-cypress
