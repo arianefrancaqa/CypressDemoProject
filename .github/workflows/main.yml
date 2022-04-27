@@ -1,16 +1,18 @@
-on: [push]
-name: Cypress Demo Project CI
+
+name: Chrome
+
+on: push
 
 jobs:
-  test:
+  chrome:
     runs-on: ubuntu-18.04
-    name: check tests
     steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - uses: testomatio/check-tests@stable
-      with:
-        framework: cypress
-        tests: "./cypress/integration/**/**.spec.js"
-        has-tests-label: true
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Chrome
+        uses: cypress-io/github-action@v2
+        timeout-minutes: 10
+        with:
+          build: npm run build
+          start: npm start
+          browser: chrome
