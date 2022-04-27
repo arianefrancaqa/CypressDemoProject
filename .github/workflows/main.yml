@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  CYPRESS_DASHBOARD: ${{secrets.CYPRESS_DASHBOARD}}
   RECORD_KEY: ${{secrets.RECORD_KEY}}
+  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
 jobs:
   checkout-and-test:
@@ -23,3 +23,6 @@ jobs:
         timeout-minutes: 10
         with:
           browser: firefox
+          record: true
+
+  
