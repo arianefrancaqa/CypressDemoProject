@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 import "@testing-library/cypress/add-commands";
 import { configure } from "@testing-library/cypress";
 

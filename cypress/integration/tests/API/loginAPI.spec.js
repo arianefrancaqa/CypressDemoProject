@@ -2,7 +2,7 @@ const { loginSchema } = require("../../../contract/schemas/login.contract");
 
 const {
   schemaValidation,
-} = require("../../../contract/schemas/validateContractSchema");
+} = require("../../../contract/validateContractSchema");
 
 describe("Login API Route Validations", () => {
   it("POST Login", () => {
