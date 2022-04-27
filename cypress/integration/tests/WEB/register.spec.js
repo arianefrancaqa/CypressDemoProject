@@ -1,30 +1,33 @@
-import { loginPage } from "../../../pages/page";
-const faker = require('@faker-js/faker')
+import { loginPage, registerPage } from "../../../pages/page";
+const faker = require("@faker-js/faker");
 
 let name = faker.faker.name.firstName();
 let email = faker.faker.internet.email();
 let password = faker.faker.datatype.number({
-    'min': 123456,
-    'max': 123456789
+  min: 123456,
+  max: 123456789,
 });
 
-describe("Register GUI Tests", () =>{
+beforeEach(() => {
+  cy.visit("/");
+});
 
-    it("Wrong Email or Password", () =>{
-        cy.visit('/');
-        cy.get(loginPage.loginInput).type(email);
-        cy.get(loginPage.passwordInput).type(password);
-        cy.get(loginPage.loginButton).click();
-        cy.get('.toast-message').should('have.text', 'Erro: Error: Request failed with status code 400');
-    })
+describe("Register GUI Tests", () => {
+  it("Registering New Account", () => {
+    cy.fillDataToRegisterAccountAndValidateMessage({
+      name: name,
+      email: email,
+      password: password,
+      message: "Usuário adicionado com sucesso",
+    });
+  });
 
-    it("Login successfully", () => {
-        cy.createAccount({name: name, email: email, password: password});
-        cy.visit('/');
-        cy.get(loginPage.loginInput).type(email);
-        cy.get(loginPage.passwordInput).type(password);
-        cy.get(loginPage.loginButton).click();
-        cy.get('.toast').should("be.visible");
-        cy.get('.toast').should("have.text", `×Bem vindo, ${name}!`)
-    })
-})
+  it("Inserting wrong email format", () => {
+    cy.fillDataToRegisterAccountAndValidateMessage({
+      name: name,
+      email: "wrongemailformat....",
+      password: password,
+      message: "Erro: Error: Request failed with status code 500",
+    });
+  });
+});
