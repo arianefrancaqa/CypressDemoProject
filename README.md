@@ -45,7 +45,7 @@
     ```
 
 (2). 
-    In Cypress view click 'Run integration spec' button
+    In Cypress Test Runner view click ``Run integration spec`` button
 
 - Headless mode:
 
