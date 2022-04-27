@@ -5,6 +5,9 @@ on:
       - 'main'
   workflow_dispatch:
 
+env:
+  CYPRESS_DASHBOARD: ${{secrets.CYPRESS_DASHBOARD}}
+
 jobs:
   checkout-and-test:
     runs-on: ubuntu-latest
