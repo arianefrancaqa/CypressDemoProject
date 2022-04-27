@@ -27,7 +27,7 @@
 
 ### 3. Clone the repository:
 
-``git clone https://github.com/arianefrancaqa/CypressDemoProject.git`
+``git clone https://github.com/arianefrancaqa/CypressDemoProject.git``
 
 ### 4. Install the dependencies and update the packages:
 
@@ -64,5 +64,6 @@
 - https://www.cypress.io/blog/2019/01/03/stop-using-page-objects-and-start-using-app-actions/
 - https://dev.to/walmyrlimaesilv/how-to-create-custom-commands-with-cypress-3102
 
+Click in the Badge bellow to see the Test Report in Cypress Dashboard: 
 
 [![Cypress Sample Project](https://img.shields.io/endpoint?url=https://dashboard.cypress.io/badge/simple/xkdu4i&style=flat&logo=cypress)](https://dashboard.cypress.io/projects/xkdu4i/runs)
