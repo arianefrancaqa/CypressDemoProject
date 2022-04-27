@@ -1,22 +1,21 @@
-name: Chrome headless
-
-on: push
+name: run my vanilla Cypress tests
+on: 
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
 
 jobs:
-  chrome-headless:
-    runs-on: ubuntu-18.04
+  checkout-and-test:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v1
-      - name: Headless Chrome
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      
+      - name: Check out repository code
+        uses: actions/checkout@v2
+
+      - name: run cypress tests with firefox
         uses: cypress-io/github-action@v2
         timeout-minutes: 10
         with:
-          working-directory: cypress
-          framework: cypress
-          tests: "./cypress/integration/**/**.spec.js"
-          build: npm run build
-          start: npm start
-          browser: chrome
-          headless: true
-          record: true
+          browser: firefox
