@@ -1,16 +1,15 @@
 import { loginPage } from "../../../pages/page";
-const faker = require("@faker-js/faker");
+const faker = require("faker");
 
-let name = faker.faker.name.firstName();
-let email = faker.faker.internet.email();
-let password = faker.faker.datatype.number({
-  min: 123456,
+let name = faker.name.firstName();
+let email = faker.internet.email();
+let password = faker.datatype.number({
   max: 123456789,
 });
 
 beforeEach(() => {
-    cy.visit("/");
-  });
+  cy.visit("/");
+});
 
 describe("Login GUI Tests", () => {
   it("Wrong Email or Password", () => {
@@ -24,9 +23,9 @@ describe("Login GUI Tests", () => {
   });
 
   it("Login successfully", () => {
-    cy.log("Creating an account using API...")
-    cy.createAccount({ name: name, email: email, password: password });
-    cy.log("Login in FE with the account created...")
+    cy.log("Creating an account using API...");
+    cy.createAccountPassingValues(name, email, password);
+    cy.log("Login in FE with the account created...");
     cy.get(loginPage.loginInput).type(email);
     cy.get(loginPage.passwordInput).type(password);
     cy.get(loginPage.loginButton).click();
