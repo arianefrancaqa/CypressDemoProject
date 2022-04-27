@@ -31,10 +31,6 @@ Cypress.Commands.add("createAccount", () => {
     expect(response.status).to.eq(201);
     expect(response.body.email).to.eq(email);
     expect(response.body.nome).to.eq(name);
-    // const emailt = response.body.email;
-    // const passwordt = password;
-    // const namet = name;
-    //const id = response.body.id;
   });
 });
 

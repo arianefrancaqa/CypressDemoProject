@@ -1,7 +1,7 @@
 declare namespace Cypress {
   interface Chainable {
     /**
-     * Creates an Account using API
+     * Register a new account using the FE
      * @param {string} name - name to register.
      * @param {string} email - email to register.
      * @param {string} password - password to register.
