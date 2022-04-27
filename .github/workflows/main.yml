@@ -12,6 +12,7 @@ jobs:
         uses: cypress-io/github-action@v2
         timeout-minutes: 10
         with:
+          working-directory: cypress
           framework: cypress
           tests: "./cypress/integration/**/**.spec.js"
           build: npm run build
