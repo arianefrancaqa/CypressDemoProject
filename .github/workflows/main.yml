@@ -1,13 +1,5 @@
-name: run Cypress Demo Tests
-on: 
-  push:
-    branches:
-      - 'main'
-  workflow_dispatch:
-
-env:
-  RECORD_KEY: ${{secrets.RECORD_KEY}}
-  GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+name: Run Cypress Demo Tests
+on: [push]
 
 jobs:
   checkout-and-test:
@@ -18,11 +10,13 @@ jobs:
       - name: Check out repository code
         uses: actions/checkout@v2
 
-      - name: run cypress tests with firefox
+      - name: Cypress run
         uses: cypress-io/github-action@v2
-        timeout-minutes: 10
         with:
-          browser: firefox
+          build: npm run build
+          start: npm start
           record: true
-
+        env:
+          CYPRESS_RECORD_KEY: ${{secrets.CYPRESS_RECORD_KEY}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
   
