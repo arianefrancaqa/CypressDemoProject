@@ -1,18 +1,25 @@
+name: Cypress Demo Project
 
-name: Chrome
-
-on: push
+# Controls when the workflow will run
+on:
+ # Triggers the workflow on push or pull request events but only for the main branch
+push:
+  branches: [ main ]
 
 jobs:
-  chrome:
-    runs-on: ubuntu-18.04
-    steps:
+  cypress-run:
+    runs-on: ubuntu-latest
+     steps:
       - name: Checkout
-        uses: actions/checkout@v1
-      - name: Chrome
-        uses: cypress-io/github-action@v2
-        timeout-minutes: 10
-        with:
-          build: npm run build
-          start: npm start
-          browser: chrome
+     uses: actions/checkout@v2
+     # Install NPM dependencies, cache them correctly
+     # and run all Cypress tests
+     - name: Cypress run
+       uses: cypress-io/github-action@v2
+       with:
+         build: npm run build
+         start: npm start
+      env:
+        CI: true
+        # pass the Dashboard record key as an environment variable
+        CYPRESS_RECORD_KEY: ${{ 521777be-20ff-4945-bef5-2d2dc523f9ba }}
