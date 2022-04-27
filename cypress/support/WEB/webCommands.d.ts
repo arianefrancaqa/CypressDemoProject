@@ -1,5 +1,3 @@
-import { param } from "cypress/types/jquery";
-
 declare namespace Cypress {
   interface Chainable {
     /**
