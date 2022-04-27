@@ -9,6 +9,6 @@ declare namespace Cypress {
      * @param {string} password - password to register.
      * @param {string} message - message in the toast.
      */
-     fillDataToRegisterAccountAndValidateMessage(name: string, email: string, password: string, message: string);
+     fillDataToRegisterAccountAndValidateMessage(name: string, email: string, password: string, message: string): void;
   }
 }
