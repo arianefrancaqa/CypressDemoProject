@@ -2,7 +2,9 @@
   "devDependencies": {
     "@faker-js/faker": "^6.2.0",
     "@testing-library/cypress": "^8.0.2",
-    "cypress": "^9.5.4",
+    "@types/cypress-axe": "^0.11.0",
+    "axe-core": "^4.4.2",
+    "cypress": "^9.7.0",
     "cypress-axe": "^1.0.0",
     "joi": "^17.6.0",
     "joi-assert": "^0.0.3",
