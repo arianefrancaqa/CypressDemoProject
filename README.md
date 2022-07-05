@@ -5,6 +5,7 @@
 - API Testing
 - Contract API Testing
 - GUI testing
+- Accessibility Testing(A11Y)
 
 ### 1. Download/Install NodeJS/NPM:
 
