@@ -13,7 +13,7 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v2
         with:
-          build: npx cypress run
+          build: npx cypress run --force
           start: npm start --force
           record: true
         env:
