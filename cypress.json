@@ -3,5 +3,6 @@
   "baseUrl": "https://barrigareact.wcaquino.me/",
   "env": {
     "API_BASE_URL": "https://barrigarest.wcaquino.me/"
-  }
+  },
+  "video": false
 }
