@@ -1,5 +1,5 @@
 import { loginPage } from "../../../pages/page";
-const faker = require("faker");
+import { faker } from "@faker-js/faker"
 
 let name = faker.name.firstName();
 let email = faker.internet.email();

@@ -16,6 +16,7 @@ Cypress.Commands.add("createAccount", () => {
     min: 123456,
     max: 123456789,
   });
+
   const request = cy.request({
     method: "POST",
     url: `${API_URL}usuarios`,
@@ -27,6 +28,7 @@ Cypress.Commands.add("createAccount", () => {
       redirecionar: false,
     },
   });
+
   return request.then((response) => {
     expect(response.status).to.eq(201);
     expect(response.body.email).to.eq(email);
@@ -46,6 +48,7 @@ Cypress.Commands.add("createAccountPassingValues", (nameT, emailT, passwordT) =>
       redirecionar: false,
     },
   });
+
   return request.then((response) => {
     expect(response.status).to.eq(201);
     expect(response.body.email).to.eq(emailT);
@@ -55,4 +58,8 @@ Cypress.Commands.add("createAccountPassingValues", (nameT, emailT, passwordT) =>
     // const namet = name;
     //const id = response.body.id;
   });
+
 });
+
+
+
