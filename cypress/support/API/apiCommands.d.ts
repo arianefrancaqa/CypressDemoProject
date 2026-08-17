@@ -16,5 +16,13 @@ declare namespace Cypress {
       email: string,
       password: string
     ): void;
+
+    /**
+     * Logs in via the API (POST /signin). Does not assert the response,
+     * since it is used for both success and failure test cases.
+     * @param {string} email - email to log in with.
+     * @param {string} password - password to log in with.
+     */
+    login(email: string, password: string): Chainable<Cypress.Response<any>>;
   }
 }
