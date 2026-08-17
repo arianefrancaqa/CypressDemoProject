@@ -5,17 +5,13 @@ jobs:
   checkout-and-test:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-
       - name: Check out repository code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Cypress run
-        uses: cypress-io/github-action@v2
+        uses: cypress-io/github-action@v7.4.2
         with:
-          build: npx cypress run
-          start: npm start
           record: true
         env:
-          CYPRESS_RECORD_KEY: ${{secrets.CYPRESS_RECORD_KEY}}
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
