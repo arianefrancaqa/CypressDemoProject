@@ -26,9 +26,9 @@ describe("GET /users", () => {
           headers: { Authorization: `Bearer ${token}` },
         }).then((response) => {
           expect(response.status).to.eq(200);
-          schemaValidation(response.body, userListResponseSchema);
           const emails = response.body.map((user) => user.email);
           expect(emails).to.include(registerResponse.body.email);
+          return schemaValidation(response.body, userListResponseSchema);
         });
       });
     });

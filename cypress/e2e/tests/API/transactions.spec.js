@@ -32,7 +32,7 @@ describe("POST /accounts/:accountId/transactions", () => {
         cy.apiCreateTransaction(token, accountId, transaction).then((response) => {
           expect(response.status).to.eq(201);
           expect(response.body.amount).to.eq(transaction.amount);
-          schemaValidation(response.body, transactionResponseSchema);
+          return schemaValidation(response.body, transactionResponseSchema);
         });
       });
     });
@@ -75,7 +75,7 @@ describe("GET /accounts/:accountId/transactions and GET /accounts/:accountId/bal
       }).then((response) => {
         expect(response.status).to.eq(200);
         expect(response.body).to.have.length(2);
-        schemaValidation(response.body, transactionListResponseSchema);
+        return schemaValidation(response.body, transactionListResponseSchema);
       });
 
       cy.request({
@@ -85,7 +85,7 @@ describe("GET /accounts/:accountId/transactions and GET /accounts/:accountId/bal
       }).then((response) => {
         expect(response.status).to.eq(200);
         expect(response.body.balance).to.eq(699.25);
-        schemaValidation(response.body, balanceResponseSchema);
+        return schemaValidation(response.body, balanceResponseSchema);
       });
     });
   });

@@ -26,7 +26,7 @@ describe("POST /accounts", () => {
       cy.apiCreateAccount(token, "Carteira").then((response) => {
         expect(response.status).to.eq(201);
         expect(response.body.name).to.eq("Carteira");
-        schemaValidation(response.body, accountResponseSchema);
+        return schemaValidation(response.body, accountResponseSchema);
       });
     });
   });
@@ -36,7 +36,7 @@ describe("POST /accounts", () => {
       cy.apiCreateAccount(token, "Carteira").then((r) => expect(r.status).to.eq(201));
       cy.apiCreateAccount(token, "carteira").then((response) => {
         expect(response.status).to.eq(409);
-        schemaValidation(response.body, errorResponseSchema);
+        return schemaValidation(response.body, errorResponseSchema);
       });
     });
   });
@@ -75,8 +75,8 @@ describe("GET /accounts", () => {
 
         cy.apiGetAccounts(tokenA).then((response) => {
           expect(response.status).to.eq(200);
-          schemaValidation(response.body, accountListResponseSchema);
           expect(response.body.map((a) => a.name)).to.have.members(["Conta A1", "Conta A2"]);
+          return schemaValidation(response.body, accountListResponseSchema);
         });
       });
     });

@@ -19,7 +19,7 @@ describe("POST /auth/register", () => {
     }).then((response) => {
       expect(response.status).to.eq(201);
       expect(response.body).to.not.have.any.keys("password", "passwordHash", "password_hash");
-      schemaValidation(response.body, registerResponseSchema);
+      return schemaValidation(response.body, registerResponseSchema);
     });
   });
 
@@ -29,10 +29,12 @@ describe("POST /auth/register", () => {
       expect(response.status).to.eq(201);
     });
 
-    cy.apiRegister({ name: "QA Test 2", email, password: VALID_PASSWORD }).then((response) => {
+    // "QA Test Two" not "QA Test 2" - the name validator rejects digits, and
+    // a 400 there would mask the 409 this test is actually checking for.
+    cy.apiRegister({ name: "QA Test Two", email, password: VALID_PASSWORD }).then((response) => {
       expect(response.status).to.eq(409);
       expect(response.body).to.deep.eq({ error: "Email already registered" });
-      schemaValidation(response.body, errorResponseSchema);
+      return schemaValidation(response.body, errorResponseSchema);
     });
   });
 
@@ -42,7 +44,7 @@ describe("POST /auth/register", () => {
       expect(response.status).to.eq(201);
     });
 
-    cy.apiRegister({ name: "QA Test 2", email: email.toUpperCase(), password: VALID_PASSWORD }).then(
+    cy.apiRegister({ name: "QA Test Two", email: email.toUpperCase(), password: VALID_PASSWORD }).then(
       (response) => {
         expect(response.status).to.eq(409);
       }
@@ -54,7 +56,7 @@ describe("POST /auth/register", () => {
       expect(response.status).to.eq(400);
       const fields = response.body.details.map((detail) => detail.field);
       expect(fields).to.have.members(["name", "email", "password"]);
-      schemaValidation(response.body, errorResponseSchema);
+      return schemaValidation(response.body, errorResponseSchema);
     });
   });
 
@@ -87,7 +89,7 @@ describe("POST /auth/login", () => {
     cy.apiLogin({ email, password: VALID_PASSWORD }).then((response) => {
       expect(response.status).to.eq(200);
       expect(response.body.user.name).to.eq(name);
-      schemaValidation(response.body, loginResponseSchema);
+      return schemaValidation(response.body, loginResponseSchema);
     });
   });
 
@@ -116,7 +118,7 @@ describe("POST /auth/login", () => {
   it("A malformed email is rejected by validation before any credential check (400, not 401)", () => {
     cy.apiLogin({ email: "not-an-email", password: VALID_PASSWORD }).then((response) => {
       expect(response.status).to.eq(400);
-      schemaValidation(response.body, errorResponseSchema);
+      return schemaValidation(response.body, errorResponseSchema);
     });
   });
 
@@ -163,7 +165,7 @@ describe("GET /auth/me", () => {
       }).then((response) => {
         expect(response.status).to.eq(200);
         expect(response.body.email).to.eq(email);
-        schemaValidation(response.body, meResponseSchema);
+        return schemaValidation(response.body, meResponseSchema);
       });
     });
   });
