@@ -13,3 +13,11 @@ import "./WEB/webCommands";
 import "./API/apiCommands";
 import "./A11y/a11yCommands";
 import "cypress-axe";
+
+// Runs once before each spec file. Without this, every run permanently
+// accumulates test users/accounts/transactions in the shared local database,
+// which eventually makes list-based assertions (e.g. the admin user list)
+// slow enough to miss Cypress's default retry timeout.
+before(() => {
+  cy.task("resetDatabase");
+});

@@ -1,0 +1,11 @@
+[
+  { "category": "Non ASCII characters (not a valid email shape)", "value": "ção-são-paulo" },
+  { "category": "HTML tags", "value": "<b>bold</b>" },
+  { "category": "Basic XSS payload", "value": "<script>alert('xss')</script>" },
+  { "category": "Basic SQL injection payload", "value": "' OR '1'='1" },
+  { "category": "Space at the beginning", "value": "   leadingspace@example.com" },
+  { "category": "Space at the end", "value": "trailingspace@example.com   " },
+  { "category": "Space in the middle", "value": "user name@example.com" },
+  { "category": "Non-alphabetic characters before letters", "value": "123!@#not-an-email" },
+  { "category": "Empty value", "value": "" }
+]

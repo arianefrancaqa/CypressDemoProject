@@ -1,0 +1,52 @@
+[
+  {
+    "category": "Value made only of spaces",
+    "value": "     ",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Space at the beginning",
+    "value": " Leading Space",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Space at the end",
+    "value": "Trailing Space ",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Space in the middle (doubled)",
+    "value": "Double  Space",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "HTML tags",
+    "value": "<b>Bold</b>",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Basic XSS payload",
+    "value": "<script>alert('xss')</script>",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Basic SQL injection payload",
+    "value": "' OR '1'='1",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Non-alphabetic characters before letters",
+    "value": "123abc",
+    "error": "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Minimum length value (1 character)",
+    "value": "A",
+    "error": "name length must be at least 2 characters long"
+  },
+  {
+    "category": "Empty value",
+    "value": "",
+    "error": "name is not allowed to be empty"
+  }
+]

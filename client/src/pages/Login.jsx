@@ -22,7 +22,7 @@ function Login() {
   }
 
   return (
-    <div>
+    <main id="main-content">
       <h1>Login</h1>
       <form onSubmit={handleSubmit} data-testid="login-form">
         <label htmlFor="login-email">Email</label>
@@ -53,7 +53,7 @@ function Login() {
       <p>
         No account? <Link to="/register">Register</Link>
       </p>
-    </div>
+    </main>
   );
 }
 

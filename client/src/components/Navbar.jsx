@@ -23,7 +23,7 @@ function Navbar() {
         </Link>
       )}
       <span data-testid="nav-user-name">{user.name}</span>
-      <button data-testid="nav-logout-button" onClick={handleLogout}>
+      <button type="button" data-testid="nav-logout-button" onClick={handleLogout}>
         Logout
       </button>
     </nav>

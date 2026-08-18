@@ -1,5 +1,6 @@
 import { navbar, loginPage } from "../../../pages/page";
 import { faker } from "@faker-js/faker";
+import loginEmailChecklist from "../../../fixtures/loginEmailChecklist.json";
 
 beforeEach(() => {
   cy.visit("/login");
@@ -42,18 +43,6 @@ describe("Login GUI Tests", () => {
 const VALIDATION_ERROR = "Validation failed";
 const INVALID_CREDENTIALS_ERROR = "Invalid email or password";
 
-const loginEmailChecklist = [
-  { category: "Non ASCII characters (not a valid email shape)", value: "ção-são-paulo" },
-  { category: "HTML tags", value: "<b>bold</b>" },
-  { category: "Basic XSS payload", value: "<script>alert('xss')</script>" },
-  { category: "Basic SQL injection payload", value: "' OR '1'='1" },
-  { category: "Space at the beginning", value: `   ${faker.internet.email()}` },
-  { category: "Space at the end", value: `${faker.internet.email()}   ` },
-  { category: "Space in the middle", value: "user name@example.com" },
-  { category: "Non-alphabetic characters before letters", value: "123!@#not-an-email" },
-  { category: "Empty value", value: "" },
-];
-
 describe("Login GUI Tests - Email Field Boundary & Security Checklist", () => {
   loginEmailChecklist.forEach(({ category, value }) => {
     it(`Email field - ${category} is rejected before checking credentials`, () => {
@@ -70,10 +59,18 @@ describe("Login GUI Tests - Email Field Boundary & Security Checklist", () => {
     cy.get(loginPage.error).should("have.text", INVALID_CREDENTIALS_ERROR);
   });
 
-  it("A SQL injection payload disguised as a syntactically valid email does not bypass authentication", () => {
+  it("A SQL injection payload in the password field does not bypass authentication for a real account", () => {
+    // An injection payload can't be disguised as the *email* itself - Joi's
+    // email format check rejects the quotes/spaces it needs before the
+    // request ever reaches a query, confirmed directly against the API.
+    // The password field has no such format restriction, so that's the
+    // meaningful place to prove parameterized queries aren't bypassable.
+    const email = faker.internet.email().toLowerCase();
+    cy.apiRegister({ name: "QA Test", email, password: "Senha1234" });
+
     cy.fillLoginFormAndSubmit({
-      email: "' OR '1'='1@example.com",
-      password: "anything",
+      email,
+      password: "' OR '1'='1",
     });
     cy.get(loginPage.error).should("have.text", INVALID_CREDENTIALS_ERROR);
   });

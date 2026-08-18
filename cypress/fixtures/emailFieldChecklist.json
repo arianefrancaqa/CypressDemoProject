@@ -1,0 +1,32 @@
+[
+  {
+    "category": "HTML tags",
+    "value": "<b>bold</b>@example.com",
+    "error": "email must be a valid email"
+  },
+  {
+    "category": "Basic XSS payload",
+    "value": "<script>alert('xss')</script>@example.com",
+    "error": "email must be a valid email"
+  },
+  {
+    "category": "Non-alphabetic characters before letters",
+    "value": "not-an-email",
+    "error": "email must be a valid email"
+  },
+  {
+    "category": "Space at the beginning",
+    "value": "  leadingspace@example.com",
+    "error": "email must be a valid email"
+  },
+  {
+    "category": "Space at the end",
+    "value": "trailingspace@example.com  ",
+    "error": "email must be a valid email"
+  },
+  {
+    "category": "Empty value",
+    "value": "",
+    "error": "email is not allowed to be empty"
+  }
+]

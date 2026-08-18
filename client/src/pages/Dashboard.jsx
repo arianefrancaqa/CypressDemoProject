@@ -33,7 +33,7 @@ function Dashboard() {
   }
 
   return (
-    <div>
+    <main id="main-content">
       <h1>Your accounts</h1>
 
       <AccountForm onSubmit={handleCreate} />
@@ -57,7 +57,7 @@ function Dashboard() {
       {!loading && accounts.length === 0 && (
         <p data-testid="no-accounts-message">No accounts yet. Create one above.</p>
       )}
-    </div>
+    </main>
   );
 }
 

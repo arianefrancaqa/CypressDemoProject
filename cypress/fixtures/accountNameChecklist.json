@@ -1,0 +1,27 @@
+[
+  {
+    "category": "Minimum length (1 char, below the 2-char floor)",
+    "value": "A",
+    "error": "name length must be at least 2 characters long"
+  },
+  {
+    "category": "Empty value",
+    "value": "",
+    "error": "name is not allowed to be empty"
+  },
+  {
+    "category": "HTML tags",
+    "value": "<b>Bank</b>",
+    "error": "name must contain only letters, numbers, single spaces or hyphens, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Basic XSS payload",
+    "value": "<script>alert('xss')</script>",
+    "error": "name must contain only letters, numbers, single spaces or hyphens, with no leading or trailing whitespace"
+  },
+  {
+    "category": "Space at the beginning",
+    "value": " Leading",
+    "error": "name must contain only letters, numbers, single spaces or hyphens, with no leading or trailing whitespace"
+  }
+]

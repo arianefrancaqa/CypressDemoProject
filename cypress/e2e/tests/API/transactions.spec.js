@@ -5,6 +5,7 @@ const {
 } = require("../../../contract/schemas/transactions.contract");
 const { schemaValidation } = require("../../../contract/validateContractSchema");
 const { faker } = require("@faker-js/faker");
+const transactionChecklist = require("../../../fixtures/transactionChecklist.json");
 
 const API_URL = Cypress.env("API_BASE_URL");
 const VALID_PASSWORD = "Senha1234";
@@ -26,16 +27,13 @@ function freshUserWithAccount() {
 
 describe("POST /accounts/:accountId/transactions", () => {
   it("Creates an income transaction", () => {
-    freshUserWithAccount().then(({ token, accountId }) => {
-      cy.apiCreateTransaction(token, accountId, {
-        description: "Salary",
-        amount: 1000.5,
-        type: "income",
-        date: "2026-01-15",
-      }).then((response) => {
-        expect(response.status).to.eq(201);
-        expect(response.body.amount).to.eq(1000.5);
-        schemaValidation(response.body, transactionResponseSchema);
+    cy.fixture("sampleTransaction.json").then((transaction) => {
+      freshUserWithAccount().then(({ token, accountId }) => {
+        cy.apiCreateTransaction(token, accountId, transaction).then((response) => {
+          expect(response.status).to.eq(201);
+          expect(response.body.amount).to.eq(transaction.amount);
+          schemaValidation(response.body, transactionResponseSchema);
+        });
       });
     });
   });
@@ -147,51 +145,6 @@ describe("PUT/DELETE /transactions/:id", () => {
     });
   });
 });
-
-// Boundary/security value checklist for transaction fields, confirmed
-// directly against the running API before being written here.
-const transactionChecklist = [
-  {
-    category: "Amount - zero",
-    fields: { amount: 0 },
-    error: "amount must be greater than 0",
-  },
-  {
-    category: "Amount - negative",
-    fields: { amount: -5 },
-    error: "amount must be greater than 0",
-  },
-  {
-    category: "Amount - more than 2 decimal places",
-    fields: { amount: 10.123 },
-    error: "amount must have at most 2 decimal places",
-  },
-  {
-    category: "Amount - more than the maximum (1,000,000)",
-    fields: { amount: 2000000 },
-    error: "amount must not exceed 1,000,000",
-  },
-  {
-    category: "Type - not income or expense",
-    fields: { type: "transfer" },
-    error: "type must be one of [income, expense]",
-  },
-  {
-    category: "Description - basic XSS/HTML payload",
-    fields: { description: "<script>alert('xss')</script>" },
-    error: "description must not contain < or > characters",
-  },
-  {
-    category: "Date - before the minimum (2000-01-01)",
-    fields: { date: "1999-12-31" },
-    error: "date must not be before 2000-01-01",
-  },
-  {
-    category: "Date - more than one day in the future",
-    fields: { date: "2099-01-01" },
-    error: "date must not be more than one day in the future",
-  },
-];
 
 describe("POST /accounts/:accountId/transactions - Field Boundary & Security Checklist", () => {
   transactionChecklist.forEach(({ category, fields, error }) => {

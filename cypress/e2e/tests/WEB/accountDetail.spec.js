@@ -12,9 +12,16 @@ function loginAndVisitFreshAccount() {
     return cy.apiCreateAccount(token, accountName).then((created) => {
       cy.visit("/login");
       cy.fillLoginFormAndSubmit({ email, password: VALID_PASSWORD });
+      // Submitting only waits for the click event, not for the app's async
+      // login handler (which persists the token, then navigates) to finish -
+      // wait for that redirect before navigating away again, or the next
+      // visit can race the token write and land back on /login.
+      cy.location("pathname").should("eq", "/");
       cy.visit(`/accounts/${created.body.id}`);
-      cy.get(accountDetailPage.name).should("have.text", accountName);
-      return created.body.id;
+      return cy
+        .get(accountDetailPage.name)
+        .should("have.text", accountName)
+        .then(() => created.body.id);
     });
   });
 }

@@ -27,7 +27,7 @@ function Register() {
   }
 
   return (
-    <div>
+    <main id="main-content">
       <h1>Register</h1>
       <form onSubmit={handleSubmit} data-testid="register-form">
         <label htmlFor="register-name">Name</label>
@@ -81,7 +81,7 @@ function Register() {
       <p>
         Already have an account? <Link to="/login">Login</Link>
       </p>
-    </div>
+    </main>
   );
 }
 

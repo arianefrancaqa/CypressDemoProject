@@ -152,7 +152,9 @@ describe("POST /auth/login", () => {
 describe("GET /auth/me", () => {
   it("Returns the authenticated user's profile", () => {
     const name = faker.person.firstName();
-    const email = faker.internet.email();
+    // The API normalizes emails to lowercase on registration, so the
+    // expected value here must match what actually gets stored/returned.
+    const email = faker.internet.email().toLowerCase();
     cy.apiRegisterAndLogin({ name, email, password: VALID_PASSWORD }).then(({ token }) => {
       cy.request({
         method: "GET",

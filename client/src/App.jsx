@@ -12,6 +12,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <Navbar />
         <Routes>
           <Route path="/login" element={<Login />} />

@@ -1,5 +1,8 @@
 import { registerPage } from "../../../pages/page";
 import { faker } from "@faker-js/faker";
+import nameFieldFixture from "../../../fixtures/nameFieldChecklist.json";
+import emailFieldFixture from "../../../fixtures/emailFieldChecklist.json";
+import passwordFieldFixture from "../../../fixtures/passwordFieldChecklist.json";
 
 beforeEach(() => {
   cy.visit("/register");
@@ -42,117 +45,33 @@ describe("Register GUI Tests", () => {
 // form. Unlike the previous target app, this API enforces real, documented
 // rules - every outcome below (including the exact message text) was
 // confirmed directly against the running API before being written here.
-const nameFieldChecklist = [
-  {
-    category: "Value made only of spaces",
-    value: "     ",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "Space at the beginning",
-    value: " Leading Space",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "Space at the end",
-    value: "Trailing Space ",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "Space in the middle (doubled)",
-    value: "Double  Space",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "HTML tags",
-    value: "<b>Bold</b>",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "Basic XSS payload",
-    value: "<script>alert('xss')</script>",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "Basic SQL injection payload",
-    value: "' OR '1'='1",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "Non-alphabetic characters before letters",
-    value: "123abc",
-    error:
-      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
-  },
-  {
-    category: "Minimum length value (1 character)",
-    value: "A",
-    error: "name length must be at least 2 characters long",
-  },
+// Most of the checklist data lives in cypress/fixtures/*.json - the two
+// length-boundary cases below are computed (not hand-typed) since they're
+// parametric ("one char past the limit"), so they're appended in code
+// instead of duplicated as literal strings in the fixture.
+const nameFieldChecklist = nameFieldFixture.concat([
   {
     category: "More than the maximum length (120 chars)",
     value: "A".repeat(120),
     error: "name length must be less than or equal to 100 characters long",
   },
-  { category: "Empty value", value: "", error: "name is not allowed to be empty" },
-];
+]);
 
-const emailFieldChecklist = [
+const emailFieldChecklist = emailFieldFixture.concat([
   {
     category: "More than the maximum length (262 chars)",
     value: `${"a".repeat(250)}@example.com`,
     error: "email length must be less than or equal to 254 characters long",
   },
-  { category: "HTML tags", value: "<b>bold</b>@example.com", error: "email must be a valid email" },
-  {
-    category: "Basic XSS payload",
-    value: "<script>alert('xss')</script>@example.com",
-    error: "email must be a valid email",
-  },
-  {
-    category: "Space at the beginning",
-    value: `  ${faker.internet.email()}`,
-    error: "email must be a valid email",
-  },
-  {
-    category: "Space at the end",
-    value: `${faker.internet.email()}  `,
-    error: "email must be a valid email",
-  },
-  { category: "Non-alphabetic characters before letters", value: "not-an-email", error: "email must be a valid email" },
-  { category: "Empty value", value: "", error: "email is not allowed to be empty" },
-];
+]);
 
-const passwordFieldChecklist = [
-  {
-    category: "Below the minimum length (6 chars, one under the 8-char floor)",
-    value: "Ab1234",
-    error: "password length must be at least 8 characters long",
-  },
+const passwordFieldChecklist = passwordFieldFixture.concat([
   {
     category: "More than the maximum length (74 chars)",
-    value: `${"a1".repeat(37)}`,
+    value: "a1".repeat(37),
     error: "password length must be less than or equal to 72 characters long",
   },
-  {
-    category: "No digit",
-    value: "onlylettersnodigit",
-    error: "password must contain at least one letter and one digit",
-  },
-  {
-    category: "No letter",
-    value: "12345678",
-    error: "password must contain at least one letter and one digit",
-  },
-  { category: "Empty value", value: "", error: "password is not allowed to be empty" },
-];
+]);
 
 describe("Register GUI Tests - Name Field Boundary & Security Checklist", () => {
   nameFieldChecklist.forEach(({ category, value, error }) => {

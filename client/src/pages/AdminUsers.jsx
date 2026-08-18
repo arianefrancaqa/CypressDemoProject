@@ -15,10 +15,16 @@ function AdminUsers() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p data-testid="loading">Loading...</p>;
+  if (loading) {
+    return (
+      <main id="main-content">
+        <p data-testid="loading">Loading...</p>
+      </main>
+    );
+  }
 
   return (
-    <div>
+    <main id="main-content">
       <h1>Users</h1>
       {error && <p data-testid="admin-users-error">{error}</p>}
       <ul data-testid="user-list">
@@ -28,7 +34,7 @@ function AdminUsers() {
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }
 

@@ -69,15 +69,27 @@ function AccountDetail() {
     }
   }
 
-  if (loading) return <p data-testid="loading">Loading...</p>;
-  if (!account) return <p data-testid="account-detail-error">{error}</p>;
+  if (loading) {
+    return (
+      <main id="main-content">
+        <p data-testid="loading">Loading...</p>
+      </main>
+    );
+  }
+  if (!account) {
+    return (
+      <main id="main-content">
+        <p data-testid="account-detail-error">{error}</p>
+      </main>
+    );
+  }
 
   return (
-    <div>
+    <main id="main-content">
       <h1 data-testid="account-detail-name">{account.name}</h1>
       <p data-testid="account-balance">Balance: {balance}</p>
 
-      <button data-testid="delete-account-button" onClick={handleDeleteAccount}>
+      <button type="button" data-testid="delete-account-button" onClick={handleDeleteAccount}>
         Delete account
       </button>
 
@@ -101,6 +113,7 @@ function AccountDetail() {
             {transaction.date} - {transaction.description} - {transaction.type} -{" "}
             {transaction.amount}
             <button
+              type="button"
               data-testid={`delete-transaction-${transaction.id}`}
               onClick={() => handleDeleteTransaction(transaction.id)}
             >
@@ -113,7 +126,7 @@ function AccountDetail() {
       {transactions.length === 0 && (
         <p data-testid="no-transactions-message">No transactions yet.</p>
       )}
-    </div>
+    </main>
   );
 }
 

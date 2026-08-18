@@ -6,7 +6,9 @@ const ADMIN_CREDENTIALS = { email: "admin@budgettracker.test", password: "AdminP
 
 describe("Admin Users GUI Tests", () => {
   it("An admin sees the Users link and can view every registered user", () => {
-    const registeredEmail = faker.internet.email();
+    // The API normalizes emails to lowercase on registration, so the
+    // expected value here must match what actually gets stored/displayed.
+    const registeredEmail = faker.internet.email().toLowerCase();
     cy.apiRegister({ name: faker.person.firstName(), email: registeredEmail, password: VALID_PASSWORD });
 
     cy.visit("/login");
@@ -32,6 +34,11 @@ describe("Admin Users GUI Tests", () => {
 
     cy.visit("/login");
     cy.fillLoginFormAndSubmit({ email, password: VALID_PASSWORD });
+    // Wait for the post-login redirect first - otherwise a slow token write
+    // could make the next visit bounce back to "/" for the wrong reason
+    // (no session yet) instead of the admin-authorization check this test
+    // is actually meant to exercise.
+    cy.location("pathname").should("eq", "/");
 
     cy.visit("/admin/users");
     cy.location("pathname").should("eq", "/");

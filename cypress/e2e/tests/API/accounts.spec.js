@@ -5,6 +5,7 @@ const {
 const { errorResponseSchema } = require("../../../contract/schemas/errorResponse.contract");
 const { schemaValidation } = require("../../../contract/validateContractSchema");
 const { faker } = require("@faker-js/faker");
+const accountNameFixture = require("../../../fixtures/accountNameChecklist.json");
 
 const API_URL = Cypress.env("API_BASE_URL");
 const VALID_PASSWORD = "Senha1234";
@@ -152,43 +153,16 @@ describe("GET/PUT/DELETE /accounts/:id - ownership", () => {
   });
 });
 
-// Boundary/security value checklist for the account name field, confirmed
-// directly against the running API before being written here.
-const accountNameChecklist = [
-  {
-    category: "Minimum length (1 char, below the 2-char floor)",
-    value: "A",
-    error: "name length must be at least 2 characters long",
-  },
+// Most of the checklist data lives in cypress/fixtures/accountNameChecklist.json
+// - the length-boundary case below is computed (not hand-typed) since it's
+// parametric ("one char past the limit").
+const accountNameChecklist = accountNameFixture.concat([
   {
     category: "More than the maximum length (70 chars)",
     value: "A".repeat(70),
     error: "name length must be less than or equal to 60 characters long",
   },
-  {
-    category: "Empty value",
-    value: "",
-    error: "name is not allowed to be empty",
-  },
-  {
-    category: "HTML tags",
-    value: "<b>Bank</b>",
-    error:
-      "name must contain only letters, numbers, single spaces or hyphens, with no leading or trailing whitespace",
-  },
-  {
-    category: "Basic XSS payload",
-    value: "<script>alert('xss')</script>",
-    error:
-      "name must contain only letters, numbers, single spaces or hyphens, with no leading or trailing whitespace",
-  },
-  {
-    category: "Space at the beginning",
-    value: " Leading",
-    error:
-      "name must contain only letters, numbers, single spaces or hyphens, with no leading or trailing whitespace",
-  },
-];
+]);
 
 describe("POST /accounts - Name Field Boundary & Security Checklist", () => {
   accountNameChecklist.forEach(({ category, value, error }) => {
