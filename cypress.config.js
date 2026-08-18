@@ -5,7 +5,7 @@ module.exports = defineConfig({
   video: false,
 
   e2e: {
-    baseUrl: "https://barrigareact.wcaquino.me/",
+    baseUrl: "http://localhost:8080/",
     specPattern: "cypress/e2e/**/*.spec.js",
     supportFile: "cypress/support/e2e.js",
     setupNodeEvents(on, config) {
@@ -14,6 +14,6 @@ module.exports = defineConfig({
   },
 
   env: {
-    API_BASE_URL: "https://barrigarest.wcaquino.me/",
+    API_BASE_URL: "http://localhost:4000/api/",
   },
 });

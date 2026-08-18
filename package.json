@@ -8,7 +8,11 @@
     "cy:run": "cypress run",
     "test": "cypress run",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "stack:up": "docker compose up --build -d",
+    "stack:down": "docker compose down -v",
+    "stack:wait": "wait-on -t 120000 http://localhost:4000/api/health http://localhost:8080",
+    "test:e2e": "start-server-and-test stack:up http://localhost:4000/api/health,http://localhost:8080 cy:run"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
@@ -20,7 +24,9 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-cypress": "^5.2.1",
     "joi": "^18.2.3",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "start-server-and-test": "^2.0.9",
+    "wait-on": "^8.0.1"
   },
   "repository": {
     "type": "git",

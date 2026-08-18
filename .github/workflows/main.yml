@@ -4,9 +4,24 @@ on: [push]
 jobs:
   checkout-and-test:
     runs-on: ubuntu-latest
+    # Throwaway, CI-only credentials for the Postgres/JWT config the Docker
+    # stack needs to boot. Disposable infra with no real data, never exposed
+    # outside this runner's private network - intentionally hardcoded here
+    # instead of repo secrets to keep the stack self-contained.
+    env:
+      POSTGRES_USER: ci_user
+      POSTGRES_PASSWORD: ci_password
+      POSTGRES_DB: budget_tracker
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+
+      - name: Build and start the app stack
+        run: docker compose up -d --build
+
+      - name: Wait for the app stack to be healthy
+        run: npx wait-on -t 120000 http://localhost:4000/api/health http://localhost:8080
 
       - name: Cypress run
         uses: cypress-io/github-action@v7.4.2
@@ -15,3 +30,19 @@ jobs:
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: cypress/screenshots
+          if-no-files-found: ignore
+
+      - name: Tear down the app stack
+        if: always()
+        run: docker compose down -v

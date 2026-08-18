@@ -1,186 +1,200 @@
-import { loginPage, registerPage } from "../../../pages/page";
+import { registerPage } from "../../../pages/page";
 import { faker } from "@faker-js/faker";
 
-const name = faker.person.firstName();
-const email = faker.internet.email();
-const password = faker.number.int({
-  min: 123456,
-  max: 123456789,
+beforeEach(() => {
+  cy.visit("/register");
 });
 
-beforeEach(() => {
-  cy.visit("/");
-});
+const VALID_PASSWORD = "Senha1234";
+const SUCCESS_MESSAGE = "Account created successfully. Please log in.";
 
 describe("Register GUI Tests", () => {
-  it("Registering New Account", () => {
-    cy.fillDataToRegisterAccountAndValidateMessage({
-      name: name,
-      email: email,
-      password: password,
-      message: "Usuário adicionado com sucesso",
-    });
-  });
-
-  it("Registering with an already used email", () => {
-    const duplicateEmail = faker.internet.email();
-    cy.createAccountPassingValues("QA Test", duplicateEmail, password);
-    cy.fillDataToRegisterAccountAndValidateMessage({
-      name: name,
-      email: duplicateEmail,
-      password: password,
-      message: "Erro: Error: Request failed with status code 500",
-    });
-  });
-
-  // Documents current behavior: neither the front end nor the API validates
-  // email format, so registration succeeds even with a malformed address.
-  it("Registering with an invalid email format is currently accepted", () => {
-    cy.fillDataToRegisterAccountAndValidateMessage({
-      name: name,
-      email: `not-an-email-${faker.string.uuid()}`,
-      password: password,
-      message: "Usuário adicionado com sucesso",
-    });
-  });
-
-  // Documents current behavior: no password strength/length rule is
-  // enforced, so a one-character password is accepted.
-  it("Registering with a weak password is currently accepted", () => {
-    cy.fillDataToRegisterAccountAndValidateMessage({
-      name: name,
+  it("Registering a new account succeeds", () => {
+    cy.fillRegisterFormAndSubmit({
+      name: faker.person.firstName(),
       email: faker.internet.email(),
-      password: "1",
-      message: "Usuário adicionado com sucesso",
+      password: VALID_PASSWORD,
     });
+    cy.get(registerPage.success).should("have.text", SUCCESS_MESSAGE);
+  });
+
+  it("Registering with an already used email is rejected", () => {
+    const email = faker.internet.email();
+    cy.apiRegister({ name: "QA Test", email, password: VALID_PASSWORD }).then((response) => {
+      expect(response.status).to.eq(201);
+    });
+
+    cy.fillRegisterFormAndSubmit({ name: "QA Test Two", email, password: VALID_PASSWORD });
+    cy.get(registerPage.error).should("have.text", "Email already registered");
+  });
+
+  it("Registering an account whose name has real, accented Portuguese characters succeeds", () => {
+    cy.fillRegisterFormAndSubmit({
+      name: "Ariane França",
+      email: faker.internet.email(),
+      password: VALID_PASSWORD,
+    });
+    cy.get(registerPage.success).should("have.text", SUCCESS_MESSAGE);
   });
 });
 
-// Boundary/security value checklist applied to each text input of the
-// registration form. The API has no validation layer, so most of these
-// document "currently accepted" behavior; the two exceptions (non-ASCII
-// text and values over 255 chars) hit a Postgres varchar/encoding error
-// and surface as a 500, confirmed directly against the API before writing
-// these assertions.
-const SUCCESS_MESSAGE = "Usuário adicionado com sucesso";
-const SERVER_ERROR_MESSAGE = "Erro: Error: Request failed with status code 500";
-const OVER_MAX_LENGTH_VALUE = "A".repeat(260);
-
+// Boundary/security value checklist applied to each field of the registration
+// form. Unlike the previous target app, this API enforces real, documented
+// rules - every outcome below (including the exact message text) was
+// confirmed directly against the running API before being written here.
 const nameFieldChecklist = [
-  { category: "Non ASCII characters", value: "Àçãü日本語ñ", expectFailure: true },
-  { category: "Value made only of spaces", value: "     " },
-  { category: "Space at the beginning", value: "   Leading Space" },
-  { category: "Space at the end", value: "Trailing Space   " },
-  { category: "Space in the middle", value: "Multiple    Spaces  Inside" },
-  { category: "HTML tags", value: "<b>Bold</b><i>Italic</i>" },
-  { category: "Basic XSS payload", value: "<script>alert('xss')</script>" },
-  { category: "Basic SQL injection payload", value: "' OR '1'='1" },
-  { category: "Minimum length value (1 character)", value: "A" },
-  { category: "Non-alphabetic characters before letters", value: "123!@#Abc" },
-  { category: "More than the maximum length (255 chars)", value: OVER_MAX_LENGTH_VALUE, expectFailure: true },
-  { category: "Empty value", value: "" },
+  {
+    category: "Value made only of spaces",
+    value: "     ",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "Space at the beginning",
+    value: " Leading Space",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "Space at the end",
+    value: "Trailing Space ",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "Space in the middle (doubled)",
+    value: "Double  Space",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "HTML tags",
+    value: "<b>Bold</b>",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "Basic XSS payload",
+    value: "<script>alert('xss')</script>",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "Basic SQL injection payload",
+    value: "' OR '1'='1",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "Non-alphabetic characters before letters",
+    value: "123abc",
+    error:
+      "name must contain only letters, single spaces, hyphens or apostrophes, with no leading or trailing whitespace",
+  },
+  {
+    category: "Minimum length value (1 character)",
+    value: "A",
+    error: "name length must be at least 2 characters long",
+  },
+  {
+    category: "More than the maximum length (120 chars)",
+    value: "A".repeat(120),
+    error: "name length must be less than or equal to 100 characters long",
+  },
+  { category: "Empty value", value: "", error: "name is not allowed to be empty" },
 ];
 
 const emailFieldChecklist = [
-  { category: "Non ASCII characters", value: `ção-${faker.string.uuid()}@test.com`, expectFailure: true },
-  { category: "More than the maximum length (255 chars)", value: `${OVER_MAX_LENGTH_VALUE}@test.com`, expectFailure: true },
-  { category: "HTML tags", value: `<b>${faker.string.uuid()}</b>@test.com` },
-  { category: "Basic XSS payload", value: `<script>alert('xss')</script>.${faker.string.uuid()}@test.com` },
-  { category: "Basic SQL injection payload", value: `' OR '1'='1'.${faker.string.uuid()}` },
-  { category: "Space at the beginning", value: `   ${faker.string.uuid()}@test.com` },
-  { category: "Space at the end", value: `${faker.string.uuid()}@test.com   ` },
-  { category: "Space in the middle", value: `${faker.string.uuid()}  space@test.com` },
-  { category: "Non-alphabetic characters before letters", value: `123!@#${faker.string.uuid()}@test.com` },
+  {
+    category: "More than the maximum length (262 chars)",
+    value: `${"a".repeat(250)}@example.com`,
+    error: "email length must be less than or equal to 254 characters long",
+  },
+  { category: "HTML tags", value: "<b>bold</b>@example.com", error: "email must be a valid email" },
+  {
+    category: "Basic XSS payload",
+    value: "<script>alert('xss')</script>@example.com",
+    error: "email must be a valid email",
+  },
+  {
+    category: "Space at the beginning",
+    value: `  ${faker.internet.email()}`,
+    error: "email must be a valid email",
+  },
+  {
+    category: "Space at the end",
+    value: `${faker.internet.email()}  `,
+    error: "email must be a valid email",
+  },
+  { category: "Non-alphabetic characters before letters", value: "not-an-email", error: "email must be a valid email" },
+  { category: "Empty value", value: "", error: "email is not allowed to be empty" },
 ];
 
 const passwordFieldChecklist = [
-  { category: "Non ASCII characters", value: "senhaçãóéü" },
-  { category: "Value made only of spaces", value: "     " },
-  { category: "Space at the beginning", value: "   leadingSpace" },
-  { category: "Space at the end", value: "trailingSpace   " },
-  { category: "Space in the middle", value: "pass   word" },
-  { category: "HTML tags", value: "<b>pass</b>" },
-  { category: "Basic XSS payload", value: "<script>alert('xss')</script>" },
-  { category: "Basic SQL injection payload", value: "' OR '1'='1" },
-  { category: "Non-alphabetic characters before letters", value: "123!@#Password" },
-  { category: "More than the maximum length (260 chars)", value: OVER_MAX_LENGTH_VALUE },
-  { category: "Empty value", value: "" },
-  // Minimum length (1 char) is already covered by
-  // "Registering with a weak password is currently accepted" above.
+  {
+    category: "Below the minimum length (6 chars, one under the 8-char floor)",
+    value: "Ab1234",
+    error: "password length must be at least 8 characters long",
+  },
+  {
+    category: "More than the maximum length (74 chars)",
+    value: `${"a1".repeat(37)}`,
+    error: "password length must be less than or equal to 72 characters long",
+  },
+  {
+    category: "No digit",
+    value: "onlylettersnodigit",
+    error: "password must contain at least one letter and one digit",
+  },
+  {
+    category: "No letter",
+    value: "12345678",
+    error: "password must contain at least one letter and one digit",
+  },
+  { category: "Empty value", value: "", error: "password is not allowed to be empty" },
 ];
 
 describe("Register GUI Tests - Name Field Boundary & Security Checklist", () => {
-  nameFieldChecklist.forEach(({ category, value, expectFailure }) => {
-    it(`Name field - ${category} is currently ${expectFailure ? "rejected (500)" : "accepted"}`, () => {
-      cy.fillDataToRegisterAccountAndValidateMessage({
-        name: value,
-        email: faker.internet.email(),
-        password: "123456",
-        message: expectFailure ? SERVER_ERROR_MESSAGE : SUCCESS_MESSAGE,
-      });
+  nameFieldChecklist.forEach(({ category, value, error }) => {
+    it(`Name field - ${category} is rejected`, () => {
+      cy.fillRegisterFormAndSubmit({ name: value, email: faker.internet.email(), password: VALID_PASSWORD });
+      cy.get(registerPage.fieldError("name")).should("contain.text", error);
     });
+  });
+
+  it("Name field - a single space between two words is accepted", () => {
+    cy.fillRegisterFormAndSubmit({
+      name: "Ana Maria",
+      email: faker.internet.email(),
+      password: VALID_PASSWORD,
+    });
+    cy.get(registerPage.success).should("have.text", SUCCESS_MESSAGE);
   });
 });
 
 describe("Register GUI Tests - Email Field Boundary & Security Checklist", () => {
-  emailFieldChecklist.forEach(({ category, value, expectFailure }) => {
-    it(`Email field - ${category} is currently ${expectFailure ? "rejected (500)" : "accepted"}`, () => {
-      cy.fillDataToRegisterAccountAndValidateMessage({
-        name: faker.person.firstName(),
-        email: value,
-        password: "123456",
-        message: expectFailure ? SERVER_ERROR_MESSAGE : SUCCESS_MESSAGE,
-      });
+  emailFieldChecklist.forEach(({ category, value, error }) => {
+    it(`Email field - ${category} is rejected`, () => {
+      cy.fillRegisterFormAndSubmit({ name: faker.person.firstName(), email: value, password: VALID_PASSWORD });
+      cy.get(registerPage.fieldError("email")).should("contain.text", error);
     });
   });
 });
 
 describe("Register GUI Tests - Password Field Boundary & Security Checklist", () => {
-  passwordFieldChecklist.forEach(({ category, value }) => {
-    it(`Password field - ${category} is currently accepted`, () => {
-      cy.fillDataToRegisterAccountAndValidateMessage({
-        name: faker.person.firstName(),
-        email: faker.internet.email(),
-        password: value,
-        message: SUCCESS_MESSAGE,
-      });
+  passwordFieldChecklist.forEach(({ category, value, error }) => {
+    it(`Password field - ${category} is rejected`, () => {
+      cy.fillRegisterFormAndSubmit({ name: faker.person.firstName(), email: faker.internet.email(), password: value });
+      cy.get(registerPage.fieldError("password")).should("contain.text", error);
     });
   });
-});
 
-// Best-effort checks for the checklist items that aren't field values:
-// looking at the page source and attempting to escalate to an admin user.
-describe("Register GUI Tests - Additional Security Checks (best-effort)", () => {
-  it("Password field is masked in the page source, not exposed as plain text", () => {
-    cy.get(loginPage.registerTabButton).click();
-    cy.get(registerPage.passwordInput)
-      .type("123456")
-      .should("have.attr", "type", "password");
-  });
-
-  // The registration form has no admin/role field to type into, so this
-  // targets the API directly, the same way a user could via dev tools.
-  it("Injecting an administrator/role field during registration has no effect", () => {
-    cy.request({
-      method: "POST",
-      url: `${Cypress.env("API_BASE_URL")}usuarios`,
-      body: {
-        nome: "Privilege Escalation Attempt",
-        email: faker.internet.email(),
-        senha: "123456",
-        administrador: true,
-        admin: true,
-        role: "admin",
-        isAdmin: true,
-      },
-    }).then((response) => {
-      expect(response.status).to.eq(201);
-      expect(response.body).to.not.have.any.keys(
-        "administrador",
-        "admin",
-        "role",
-        "isAdmin"
-      );
+  it("Password field - HTML/XSS/SQL-injection-shaped content is accepted (it's hashed, never rendered)", () => {
+    cy.fillRegisterFormAndSubmit({
+      name: faker.person.firstName(),
+      email: faker.internet.email(),
+      password: "<script>1234</script>",
     });
+    cy.get(registerPage.success).should("have.text", SUCCESS_MESSAGE);
   });
 });

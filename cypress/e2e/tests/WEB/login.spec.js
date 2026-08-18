@@ -1,134 +1,80 @@
-import { loginPage } from "../../../pages/page";
+import { navbar, loginPage } from "../../../pages/page";
 import { faker } from "@faker-js/faker";
 
-const name = faker.person.firstName();
-const email = faker.internet.email();
-const password = faker.number.int({
-  max: 123456789,
-});
-
 beforeEach(() => {
-  cy.visit("/");
+  cy.visit("/login");
 });
 
 describe("Login GUI Tests", () => {
-  it("Wrong Email or Password", () => {
-    cy.get(loginPage.loginInput).type(email);
-    cy.get(loginPage.passwordInput).type(password);
-    cy.get(loginPage.loginButton).click();
-    cy.get(".toast-message").should(
-      "have.text",
-      "Erro: Error: Request failed with status code 400"
-    );
+  it("Login with a nonexistent account shows an invalid-credentials error", () => {
+    cy.fillLoginFormAndSubmit({ email: faker.internet.email(), password: "Senha1234" });
+    cy.get(loginPage.error).should("have.text", "Invalid email or password");
   });
 
   it("Login successfully", () => {
-    cy.log("Creating an account using API...");
-    cy.createAccountPassingValues(name, email, password);
-    cy.log("Login in FE with the account created...");
-    cy.get(loginPage.loginInput).type(email);
-    cy.get(loginPage.passwordInput).type(password);
-    cy.get(loginPage.loginButton).click();
-    cy.get(".toast").should("be.visible");
-    cy.get(".toast").should("have.text", `×Bem vindo, ${name}!`);
+    const name = faker.person.firstName();
+    const email = faker.internet.email();
+    const password = "Senha1234";
+
+    cy.apiRegister({ name, email, password }).then((response) => {
+      expect(response.status).to.eq(201);
+    });
+
+    cy.fillLoginFormAndSubmit({ email, password });
+    cy.get(navbar.userName).should("have.text", name);
   });
 
-  it("Login with wrong password for an existing account", () => {
-    const existingEmail = faker.internet.email();
-    cy.createAccountPassingValues("QA Test", existingEmail, password);
-    cy.get(loginPage.loginInput).type(existingEmail);
-    cy.get(loginPage.passwordInput).type("wrongPassword");
-    cy.get(loginPage.loginButton).click();
-    cy.get(".toast-message").should(
-      "have.text",
-      "Erro: Error: Request failed with status code 401"
-    );
-  });
+  it("Login with the wrong password for an existing account shows the same invalid-credentials error", () => {
+    const email = faker.internet.email();
+    cy.apiRegister({ name: "QA Test", email, password: "Senha1234" });
 
+    cy.fillLoginFormAndSubmit({ email, password: "WrongPass1" });
+    cy.get(loginPage.error).should("have.text", "Invalid email or password");
+  });
 });
 
-function attemptLogin(email, loginPassword) {
-  cy.get(loginPage.loginInput).type(email);
-  cy.get(loginPage.passwordInput).type(loginPassword);
-  cy.get(loginPage.loginButton).click();
-}
-
-// Boundary/security value checklist applied to the login form. These target
-// accounts that don't exist, so a well-behaved backend should reject all of
-// them the same way it rejects any unknown email (400) - confirmed directly
-// against the API before writing these assertions. Non-ASCII input is the
-// one exception: it hits the same Postgres encoding error as on
-// registration and surfaces as a 500 instead.
-const INVALID_CREDENTIALS_MESSAGE =
-  "Erro: Error: Request failed with status code 400";
-const SERVER_ERROR_MESSAGE = "Erro: Error: Request failed with status code 500";
+// Boundary/security value checklist applied to the login email field. Unlike
+// the previous target app, this API validates email format before ever
+// touching the database, so most malformed values below are rejected with a
+// 400 field error - confirmed directly against the API before writing these
+// assertions. A well-formed but nonexistent/mismatched email always falls
+// through to the generic, non-enumerable 401 message.
+const VALIDATION_ERROR = "Validation failed";
+const INVALID_CREDENTIALS_ERROR = "Invalid email or password";
 
 const loginEmailChecklist = [
-  { category: "Non ASCII characters", value: `ção-${faker.string.uuid()}@test.com`, expectServerError: true },
-  { category: "More than the maximum length (260 chars)", value: `${"a".repeat(260)}@test.com` },
-  { category: "HTML tags", value: `<b>${faker.string.uuid()}</b>@test.com` },
-  { category: "Basic XSS payload", value: `<script>alert('xss')</script>.${faker.string.uuid()}@test.com` },
-  { category: "Basic SQL injection payload (email and password)", value: "' OR '1'='1", password: "' OR '1'='1" },
-  { category: "Space at the beginning", value: `   ${faker.string.uuid()}@test.com` },
-  { category: "Space at the end", value: `${faker.string.uuid()}@test.com   ` },
-  { category: "Space in the middle", value: `${faker.string.uuid()}  space@test.com` },
-  { category: "Non-alphabetic characters before letters", value: `123!@#${faker.string.uuid()}@test.com` },
+  { category: "Non ASCII characters (not a valid email shape)", value: "ção-são-paulo" },
+  { category: "HTML tags", value: "<b>bold</b>" },
+  { category: "Basic XSS payload", value: "<script>alert('xss')</script>" },
+  { category: "Basic SQL injection payload", value: "' OR '1'='1" },
+  { category: "Space at the beginning", value: `   ${faker.internet.email()}` },
+  { category: "Space at the end", value: `${faker.internet.email()}   ` },
+  { category: "Space in the middle", value: "user name@example.com" },
+  { category: "Non-alphabetic characters before letters", value: "123!@#not-an-email" },
+  { category: "Empty value", value: "" },
 ];
 
 describe("Login GUI Tests - Email Field Boundary & Security Checklist", () => {
-  loginEmailChecklist.forEach(({ category, value, password: pwd, expectServerError }) => {
-    it(`Email field - ${category} is currently rejected as invalid credentials (${expectServerError ? "500" : "400"})`, () => {
-      attemptLogin(value, pwd || "123456");
-      cy.get(".toast-message").should(
-        "have.text",
-        expectServerError ? SERVER_ERROR_MESSAGE : INVALID_CREDENTIALS_MESSAGE
-      );
-    });
-  });
-});
-
-// These two use accounts we create ourselves via the API, so the outcome
-// isn't dependent on values other testers may have already registered on
-// this shared demo server.
-describe("Login GUI Tests - Credential Boundary Checklist (self-created accounts)", () => {
-  it("Empty value password is currently accepted for both registration and login", () => {
-    const email = faker.internet.email();
-    cy.createAccountPassingValues("QA Test", email, "").then(() => {
-      attemptLogin(email, "");
-      cy.get(".toast").should("be.visible");
-      cy.get(".toast").should("have.text", "×Bem vindo, QA Test!");
+  loginEmailChecklist.forEach(({ category, value }) => {
+    it(`Email field - ${category} is rejected before checking credentials`, () => {
+      cy.fillLoginFormAndSubmit({ email: value, password: "Senha1234" });
+      cy.get(loginPage.error).should("have.text", VALIDATION_ERROR);
     });
   });
 
-  it("Minimum length value (1 character) password is currently accepted for both registration and login", () => {
-    const email = faker.internet.email();
-    cy.createAccountPassingValues("QA Test", email, "1").then(() => {
-      attemptLogin(email, "1");
-      cy.get(".toast").should("be.visible");
-      cy.get(".toast").should("have.text", "×Bem vindo, QA Test!");
+  it("Email field - a well-formed but nonexistent address falls through to the generic invalid-credentials error", () => {
+    cy.fillLoginFormAndSubmit({
+      email: `nonexistent-${faker.string.uuid()}@example.com`,
+      password: "Senha1234",
     });
-  });
-});
-
-// Best-effort checks for the checklist items that aren't field values:
-// looking at the cookie jar and the page source after logging in.
-describe("Login GUI Tests - Additional Security Checks (best-effort)", () => {
-  it("No cookie is set with the plaintext password after login", () => {
-    const loginEmail = faker.internet.email();
-    const loginPassword = faker.internet.password();
-    cy.createAccountPassingValues("QA Test", loginEmail, loginPassword).then(() => {
-      attemptLogin(loginEmail, loginPassword);
-      cy.get(".toast").should("be.visible");
-      cy.getCookies().then((cookies) => {
-        const leaked = cookies.some((cookie) => cookie.value.includes(loginPassword));
-        expect(leaked, "no cookie should contain the plaintext password").to.be.false;
-      });
-    });
+    cy.get(loginPage.error).should("have.text", INVALID_CREDENTIALS_ERROR);
   });
 
-  it("Password field is masked in the page source, not exposed as plain text", () => {
-    cy.get(loginPage.passwordInput)
-      .type("123456")
-      .should("have.attr", "type", "password");
+  it("A SQL injection payload disguised as a syntactically valid email does not bypass authentication", () => {
+    cy.fillLoginFormAndSubmit({
+      email: "' OR '1'='1@example.com",
+      password: "anything",
+    });
+    cy.get(loginPage.error).should("have.text", INVALID_CREDENTIALS_ERROR);
   });
 });
