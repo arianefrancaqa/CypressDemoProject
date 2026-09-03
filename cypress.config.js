@@ -32,19 +32,70 @@ module.exports = defineConfig({
     setupNodeEvents(on, config) {
       require("cypress-mochawesome-reporter/plugin")(on);
 
+      // Every DB task opens and closes its own short-lived connection. The
+      // suite issues few enough queries that a pool isn't worth the extra
+      // lifecycle to manage, and a leaked pool would keep the Node process
+      // alive after the run finishes.
+      async function withClient(callback) {
+        const client = new Client({ connectionString: DATABASE_URL });
+        await client.connect();
+        try {
+          return await callback(client);
+        } finally {
+          await client.end();
+        }
+      }
+
       on("task", {
         async resetDatabase() {
-          const client = new Client({ connectionString: DATABASE_URL });
-          await client.connect();
-          try {
+          await withClient((client) =>
             // Deletes every user created by the suite (their accounts and
             // transactions cascade with them) but keeps the seeded admin,
             // so repeated runs never accumulate data across spec files.
-            await client.query("DELETE FROM users WHERE email <> 'admin@budgettracker.test'");
-          } finally {
-            await client.end();
-          }
+            client.query("DELETE FROM users WHERE email <> 'admin@budgettracker.test'")
+          );
           return null;
+        },
+
+        // Read-only query used by the data-layer specs to assert on what is
+        // actually stored, rather than on what the API says it stored.
+        async dbQuery({ sql, params = [] }) {
+          const result = await withClient((client) => client.query(sql, params));
+          return result.rows;
+        },
+
+        // Attempts a write and reports whether the database accepted it,
+        // ALWAYS rolling back so the suite's data is never mutated. This is
+        // how constraint tests can try an invalid INSERT without cleanup.
+        //
+        // `probe` (optional) runs inside the same rolled-back transaction,
+        // so a test can observe the intermediate state a write produced -
+        // e.g. which rows a cascading DELETE removed - without persisting it.
+        async dbAttemptWrite({ sql, params = [], probe }) {
+          return withClient(async (client) => {
+            await client.query("BEGIN");
+            try {
+              await client.query(sql, params);
+              const probeRows = probe
+                ? (await client.query(probe.sql, probe.params || [])).rows
+                : null;
+              return { accepted: true, error: null, probeRows };
+            } catch (err) {
+              return {
+                accepted: false,
+                error: {
+                  // Postgres SQLSTATE: 23514 check_violation,
+                  // 23505 unique_violation, 23503 foreign_key_violation.
+                  code: err.code,
+                  constraint: err.constraint || null,
+                  message: err.message,
+                },
+                probeRows: null,
+              };
+            } finally {
+              await client.query("ROLLBACK");
+            }
+          });
         },
       });
       return config;
