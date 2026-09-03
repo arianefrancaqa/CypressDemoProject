@@ -10,6 +10,15 @@
 - Accessibility Testing (A11Y)
 - A boundary-value & security checklist (spaces, HTML/XSS/SQL-injection payloads, min/max length, empty values, etc.) applied to every text input
 - Authorization/IDOR testing (ownership checks, admin vs. regular user, 403 vs 404)
+- Database-level data-integrity testing (constraints asserted directly against
+  Postgres, not only through the API)
+- Load/failure testing with Artillery, asserting graceful degradation rather
+  than throughput
+- A written QA practice - test strategy, traceability matrix, and defect
+  reports (see [`docs/`](docs/))
+- Built with Claude Code as a deliberate part of the workflow, with the
+  project's conventions taught to the tool over time (see
+  [`CLAUDE.md`](CLAUDE.md) and [`docs/claude-workflow.md`](docs/claude-workflow.md))
 - Everything runs in Docker, locally and in CI
 
 ---
@@ -20,7 +29,10 @@
 CypressDemoProject/
 ├── server/        Node/Express API (Knex + PostgreSQL, JWT auth, Joi validation)
 ├── client/        React (Vite) frontend
-├── cypress/       The test suite (API, GUI, Contract, A11y)
+├── cypress/       The test suite (API, GUI, Contract, Data, A11y)
+├── perf/          Artillery load/failure scenarios
+├── docs/          Test strategy, traceability, defect reports, load results
+├── .claude/       CLAUDE.md conventions + custom slash commands
 ├── docker-compose.yml
 └── .github/workflows/main.yml
 ```
@@ -112,8 +124,8 @@ npm run test:e2e
 
 ## 3. About the test suite
 
-- Cypress specs live under `cypress/e2e/tests/`, split into `API/`, `WEB/`, and
-  `A11y/`.
+- Cypress specs live under `cypress/e2e/tests/`, split into `API/`, `WEB/`,
+  `DATA/`, and `A11y/`.
 - `cypress/pages/page.js` holds one flat selector object per page, all keyed
   off `data-testid` attributes in the React app.
 - `cypress/support/API/apiCommands.js` and `cypress/support/WEB/webCommands.js`
@@ -137,10 +149,68 @@ npm run test:e2e
   the same runner IP); the real, stricter default lives in the server code and
   the rate-limiting behavior itself is verified via response headers rather
   than by exhausting the limit.
+- `cypress/e2e/tests/DATA/dataIntegrity.spec.js` asserts constraints directly
+  against Postgres, because an API test proves the happy path enforces a rule
+  while only a constraint proves the rule can't be violated. Its writes run
+  inside a transaction that is always rolled back. This is what surfaced
+  DEF-002.
+- `perf/` holds Artillery scenarios that assert graceful degradation - no 5xx,
+  contract-allowed statuses only, bounded latency, and an exact-balance check
+  so concurrent reads have to be arithmetically correct, not merely
+  successful.
 
 ---
 
-## 4. CI
+## 4. Documentation
+
+The written side of the QA practice - the part that usually goes missing from a
+test-automation portfolio:
+
+| Document | What it covers |
+|---|---|
+| [`docs/TEST-STRATEGY.md`](docs/TEST-STRATEGY.md) | Scope, risk-based prioritization (why authorization/IDOR is P0), environments, entry/exit criteria, automated vs. manual and why |
+| [`docs/TRACEABILITY.md`](docs/TRACEABILITY.md) | Requirement IDs derived from the app's real behavior, mapped to the specs and test names that cover them - including an explicit gaps table |
+| [`docs/sample-defect-report.md`](docs/sample-defect-report.md) | Three defects found in this codebase, each reproduced with captured evidence, root-cause analysis, and a suggested fix |
+| [`docs/LOAD-TESTING.md`](docs/LOAD-TESTING.md) | Load/failure approach and measured results, including where the login path saturates and why |
+| [`docs/QUALITY-SUMMARY.md`](docs/QUALITY-SUMMARY.md) | One page in business language, for a non-technical stakeholder |
+
+Run the load scenarios with the stack up:
+
+```
+npm run perf              # both scenarios
+npm run perf:login        # POST /auth/login under concurrency
+npm run perf:transactions # the full authenticated transaction journey
+```
+
+---
+
+## 5. Built with Claude Code, on purpose
+
+This project is AI-augmented by design, and tries to show that specifically
+rather than as a claim:
+
+- [`CLAUDE.md`](CLAUDE.md) documents the conventions and edge cases a fresh
+  session can't infer from any single file - the App Actions pattern, the
+  403/404/400 ownership matrix, the validator traps that make assertions
+  silently wrong, the post-login redirect race, and why the rate limit is
+  verified via headers instead of exhausted.
+- [`docs/claude-workflow.md`](docs/claude-workflow.md) shows the loop with real
+  before/after examples pulled from this repository's git history - including
+  nine contract assertions that ran but could never fail, and a test that
+  passed for the wrong reason.
+- [`.claude/commands/`](.claude/commands/) holds two custom slash commands
+  (`/new-boundary-test`, `/new-contract-schema`) that encode this project's
+  actual testing patterns, so they're extended rather than re-explained.
+
+The honest summary: the tool is good at producing the *shape* of a test and
+consistently wrong about *exact* error strings, so every message asserted in
+`cypress/fixtures/` was confirmed against the running API. Notably, none of the
+three defects in the defect report were found by the automated suite - they came
+from exploratory work.
+
+---
+
+## 6. CI
 
 `.github/workflows/main.yml` builds and starts the same Docker Compose stack
 on every push, waits for it to become healthy, then runs the Cypress suite
@@ -148,7 +218,7 @@ against it - no external site or service is required.
 
 ---
 
-## 5. Cypress documentation this project is based on:
+## 7. Cypress documentation this project is based on:
 - https://docs.cypress.io/guides/overview/why-cypress
 - https://www.cypress.io/blog/2019/01/03/stop-using-page-objects-and-start-using-app-actions/
 - https://dev.to/walmyrlimaesilv/how-to-create-custom-commands-with-cypress-3102
