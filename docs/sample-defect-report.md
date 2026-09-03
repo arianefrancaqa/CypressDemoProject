@@ -1,6 +1,6 @@
 # Defect Report
 
-Two findings from this codebase. Both were reproduced against the running
+Three findings from this codebase. All were reproduced against the running
 stack; the evidence below is captured output, not inferred behaviour.
 
 | ID | Title | Severity | Priority | Status |
