@@ -1,6 +1,7 @@
 .DS_Store
 cypress/screenshots/
 cypress/videos/
+cypress/reports/
 node_modules/
 .env
 client/dist/

@@ -13,6 +13,7 @@ import "./WEB/webCommands";
 import "./API/apiCommands";
 import "./A11y/a11yCommands";
 import "cypress-axe";
+import "cypress-mochawesome-reporter/register";
 
 // Runs once before each spec file. Without this, every run permanently
 // accumulates test users/accounts/transactions in the shared local database,
