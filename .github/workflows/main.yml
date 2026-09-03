@@ -43,6 +43,14 @@ jobs:
           path: cypress/screenshots
           if-no-files-found: ignore
 
+      - name: Upload HTML test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-html-report
+          path: cypress/reports
+          if-no-files-found: ignore
+
       - name: Tear down the app stack
         if: always()
         run: docker compose down -v

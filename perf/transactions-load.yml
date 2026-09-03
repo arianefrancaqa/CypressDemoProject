@@ -1,0 +1,133 @@
+# Load/failure probe: the authenticated transaction journey under concurrency.
+#
+# Exercises the write-then-read path that carries the application's actual
+# value - create an account, record transactions, list them back, read the
+# computed balance. Like login-load.yml, this asserts graceful degradation
+# rather than throughput; see docs/LOAD-TESTING.md.
+#
+# The balance assertion is the interesting one. Under concurrency it is not
+# enough for requests to succeed: the number they return has to be right. A
+# read path that returns a stale or partially-summed balance is a correctness
+# failure that a pure throughput test would score as a pass.
+#
+# LOGIN RATE-LIMIT BUDGET: 1 login attempt per virtual user, ~170 users, so
+# roughly 170 of the test stack's 1000-per-15-minutes allowance. See the note
+# at the top of login-load.yml.
+
+config:
+  target: "http://localhost:4000/api"
+  processor: "./helpers.js"
+
+  phases:
+    - name: warm-up
+      duration: 10
+      arrivalRate: 2
+    - name: steady-concurrency
+      duration: 30
+      arrivalRate: 5
+
+  # Both plugins are required. Without `expect`, every expectation below is
+  # silently ignored and the run always passes - verified by deliberately
+  # breaking the balance assertion and confirming the run then fails (see
+  # docs/LOAD-TESTING.md, "Trusting the harness").
+  plugins:
+    expect: {}
+    ensure: {}
+
+  # See login-load.yml for why the per-request status lists are the real gate
+  # and `maxErrorRate` would not catch an expectation failure.
+  ensure:
+    thresholds:
+      # Measured p95 on a warm stack is ~320ms; a cold first run reached
+      # ~1400ms. 2000ms fails on genuine queueing without flaking on a cold
+      # container.
+      - http.response_time.p95: 2000
+
+  http:
+    timeout: 10
+
+scenarios:
+  - name: "Full transaction journey under concurrency"
+    flow:
+      - function: "uniqueUser"
+      - function: "todayIsoDate"
+
+      - post:
+          url: "/auth/register"
+          json:
+            name: "{{ name }}"
+            email: "{{ email }}"
+            password: "{{ password }}"
+          expect:
+            - statusCode: 201
+
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.token"
+              as: "token"
+          expect:
+            - statusCode: 200
+
+      - post:
+          url: "/accounts"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            name: "{{ accountName }}"
+          capture:
+            - json: "$.id"
+              as: "accountId"
+          expect:
+            - statusCode: 201
+
+      - post:
+          url: "/accounts/{{ accountId }}/transactions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            description: "Salary"
+            amount: 1000.5
+            type: "income"
+            date: "{{ today }}"
+          expect:
+            - statusCode: 201
+
+      - post:
+          url: "/accounts/{{ accountId }}/transactions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            description: "Rent"
+            amount: 300.25
+            type: "expense"
+            date: "{{ today }}"
+          expect:
+            - statusCode: 201
+
+      - get:
+          url: "/accounts/{{ accountId }}/transactions"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+            - contentType: json
+
+      # Correctness under concurrency, not just availability: 1000.50 income
+      # minus 300.25 expense must be exactly 700.25 for this user's own
+      # account, regardless of how many other users are writing at the time.
+      - get:
+          url: "/accounts/{{ accountId }}/balance"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          capture:
+            - json: "$.balance"
+              as: "balance"
+          expect:
+            - statusCode: 200
+            - equals:
+                - "{{ balance }}"
+                - 700.25
