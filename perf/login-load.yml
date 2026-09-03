@@ -1,0 +1,102 @@
+# Load/failure probe: POST /auth/login under concurrency.
+#
+# This asserts GRACEFUL DEGRADATION, not throughput. The pass/fail question is
+# "does the service stay correct and predictable when several callers arrive at
+# once", never "how many requests per second can it do". See
+# docs/LOAD-TESTING.md for why that distinction drives everything below.
+#
+# LOGIN RATE-LIMIT BUDGET
+# The login limiter is per-IP, in-memory, on a 15-minute window, with no reset
+# hook (server/src/middleware/rateLimiter.js). The Docker test stack raises it
+# to LOGIN_RATE_LIMIT_MAX=1000. This scenario makes 2 login attempts per virtual
+# user and arrives ~100 users, so it spends roughly 200 of those 1000 slots.
+# That is deliberate: overspending here would 429 every login in the Cypress
+# suite for the rest of the window, and the failures would surface far from
+# their cause. Raise the phases only if you also know what else shares the IP.
+
+config:
+  target: "http://localhost:4000/api"
+  processor: "./helpers.js"
+
+  phases:
+    - name: warm-up
+      duration: 10
+      arrivalRate: 2
+    # 3 arrivals/sec is deliberate, not arbitrary. Each virtual user costs
+    # ~220ms of single-threaded CPU in bcrypt (1 hash + 2 compares at cost 10,
+    # measured in-container), and bcryptjs is pure JS, so it blocks the event
+    # loop rather than offloading to a thread pool. That puts saturation at
+    # ~4.5 arrivals/sec on one Node process. Running the gate at 3/s keeps it
+    # inside capacity and stable; the saturation curve itself is measured and
+    # documented in docs/LOAD-TESTING.md rather than asserted here.
+    - name: steady-concurrency
+      duration: 30
+      arrivalRate: 3
+
+  # Both plugins are required. Without `expect`, every expectation below is
+  # silently ignored and the run always passes - verified by deliberately
+  # breaking an assertion and confirming the run then fails (see
+  # docs/LOAD-TESTING.md, "Trusting the harness").
+  plugins:
+    expect: {}
+    ensure: {}
+
+  # The release gate.
+  #
+  # The statuses listed on each request ARE the gate: a 429 is graceful
+  # back-pressure and a 401 is a correct rejection, so both are allowed, while
+  # anything else - notably a 5xx - fails that expectation and exits non-zero.
+  #
+  # Note that `maxErrorRate` would NOT catch that: `vusers.failed` counts
+  # scenario-level errors (connection failures, capture failures), and stays at
+  # 0 when an expectation fails. The expect plugin's own non-zero exit code is
+  # what fails the run, and CI relies on it.
+  ensure:
+    thresholds:
+      # Measured p95 at this arrival rate is ~240ms. 1000ms leaves room for a
+      # cold stack while still failing loudly if the login path regresses into
+      # queueing.
+      - http.response_time.p95: 1000
+
+  http:
+    timeout: 10
+
+scenarios:
+  - name: "Register, then a correct and an incorrect login"
+    flow:
+      - function: "uniqueUser"
+
+      - post:
+          url: "/auth/register"
+          json:
+            name: "{{ name }}"
+            email: "{{ email }}"
+            password: "{{ password }}"
+          expect:
+            - statusCode: 201
+
+      # Valid credentials. Under load this must still authenticate, or shed
+      # load with a 429 - it must never fail with a 5xx.
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.token"
+              as: "token"
+              strict: false
+          expect:
+            - statusCode: [200, 429]
+
+      # Invalid credentials under load. This is where a system that degrades
+      # badly starts leaking - a timeout, a stack trace, or an error shape
+      # other than the one the contract promises.
+      - post:
+          url: "/auth/login"
+          json:
+            email: "{{ email }}"
+            password: "WrongPass1"
+          expect:
+            - statusCode: [401, 429]
+            - contentType: json

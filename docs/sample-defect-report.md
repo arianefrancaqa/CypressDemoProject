@@ -7,6 +7,7 @@ stack; the evidence below is captured output, not inferred behaviour.
 |---|---|---|---|---|
 | [DEF-001](#def-001) | Concurrent duplicate submissions return HTTP 500 instead of 409 | Major | High | Open |
 | [DEF-002](#def-002) | "Cannot delete an account with transactions" is not enforced at the database layer | Medium | Medium | Open — accepted risk pending review |
+| [DEF-003](#def-003) | A malformed JSON request body returns HTTP 500 instead of 400 | Major | High | Open |
 
 ---
 
@@ -384,3 +385,145 @@ test** that pins this behaviour and points back at this report. It asserts what
 the database does *today* — including the cascade — so that if someone changes
 the delete rule, the test fails loudly and this decision gets revisited on
 purpose rather than by accident.
+
+---
+
+<a name="def-003"></a>
+
+## DEF-003 — A malformed JSON request body returns HTTP 500 instead of 400
+
+| Field | Value |
+|---|---|
+| **Component** | API — `app.js` / `middleware/errorHandler.js` |
+| **Endpoints** | Every `POST` and `PUT` route (the whole API surface that accepts a body) |
+| **Severity** | **Major** — trivially reachable, violates the error contract on every write endpoint |
+| **Priority** | **High** — one-line fix, and it currently makes 5xx alerting meaningless |
+| **Reproducibility** | **100%** |
+| **Found by** | Accidentally — a shell-quoting mistake sent a malformed body during load-test setup |
+
+### Summary
+
+Any request whose body is not valid JSON returns **`500 Internal Server Error`**
+instead of the documented **`400 Bad Request`**. No authentication, tooling, or
+timing is required — a single malformed request reproduces it every time.
+
+### Steps to reproduce
+
+```bash
+curl -i -X POST http://localhost:4000/api/auth/login   -H "Content-Type: application/json"   -d '{"email":'
+```
+
+### Expected result
+
+```
+400  { "error": "Malformed JSON in request body" }
+```
+
+### Actual result
+
+```
+HTTP/1.1 500 Internal Server Error
+{"error":"Internal server error"}
+```
+
+Confirmed on an authenticated route as well — `POST /api/accounts` with the body
+`{bad json}` returns `500`, **before** the missing-token check runs, so a request
+that should be a `401` is also reported as a server fault.
+
+### Evidence — server log
+
+```
+backend-1  | SyntaxError: Expected property name or '}' in JSON at position 1
+backend-1  |     at JSON.parse (<anonymous>)
+backend-1  |     at parse (/app/node_modules/body-parser/lib/types/json.js:96:19)
+backend-1  |   expose: true,
+backend-1  |   statusCode: 400,
+backend-1  |   status: 400,
+backend-1  |   type: 'entity.parse.failed'
+```
+
+The log is the whole story: body-parser already classified this correctly as
+`statusCode: 400`, `type: 'entity.parse.failed'`. That classification is then
+discarded.
+
+### Root-cause hypothesis
+
+Same root cause family as DEF-001. `errorHandler` maps **only** `ApiError`
+instances and treats everything else as an unexpected fault:
+
+```js
+if (err instanceof ApiError) { /* ...uses err.statusCode... */ }
+
+console.error(err);
+return res.status(500).json({ error: "Internal server error" });
+```
+
+body-parser's `SyntaxError` carries a perfectly good `statusCode`, but it is not
+an `ApiError`, so the 400 is thrown away and replaced with a 500.
+
+### Impact
+
+- **Every write endpoint violates its published contract** for a common client
+  mistake.
+- **5xx alerting is devalued.** A 500 is supposed to mean "something is broken
+  on the server". Any client sending bad JSON — a buggy integration, a truncated
+  upload, a mis-encoded mobile request — can generate them at will.
+- **Misleading for API consumers.** A 500 tells an integrator to retry or open a
+  support ticket; a 400 tells them to fix their payload. The current behaviour
+  sends them down the wrong path.
+- **Log noise**, with full stack traces written for what is ordinary client
+  error.
+
+### Suggested fix
+
+Teach `errorHandler` to honour an already-classified client error. This also
+covers DEF-001's `23505` case, so both defects are worth fixing together:
+
+```js
+function errorHandler(err, req, res, next) {
+  if (err instanceof ApiError) {
+    const body = { error: err.message };
+    if (err.details) body.details = err.details;
+    return res.status(err.statusCode).json(body);
+  }
+
+  // body-parser (and other Express middleware) raise errors that already
+  // carry a correct 4xx status. Honour it instead of reporting a fault.
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ error: "Malformed JSON in request body" });
+  }
+
+  console.error(err);
+  return res.status(500).json({ error: "Internal server error" });
+}
+```
+
+### Suggested regression test
+
+Fits the existing negative-path conventions in `API/auth.spec.js`:
+
+```js
+it("A malformed JSON body is rejected as a 400, not reported as a server error", () => {
+  cy.request({
+    method: "POST",
+    url: `${API_URL}auth/login`,
+    headers: { "Content-Type": "application/json" },
+    body: '{"email":',
+    failOnStatusCode: false,
+  }).then((response) => {
+    expect(response.status).to.eq(400);
+    return schemaValidation(response.body, errorResponseSchema);
+  });
+});
+```
+
+### Note on how this was found
+
+This defect was not on any test plan. It surfaced because a shell-quoting
+mistake sent a malformed body while setting up an unrelated load test, and the
+`500` in the response was treated as a question rather than as noise.
+
+That is worth recording, because it is the argument for exploratory testing made
+concrete: the automated suite covers every documented rule of this API and would
+never have found this, since nobody had thought to specify what happens when the
+body is not JSON at all.
